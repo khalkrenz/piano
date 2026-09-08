@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piano Repeat Challenge</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  text-align:center;
+  color:white;
+  background:linear-gradient(135deg,#12002f,#32145c,#071b3d);
+  min-height:100vh;
+}
+.container{max-width:700px;margin:auto;padding:20px;}
+h1{font-size:30px;}
+button{border:0;border-radius:12px;padding:15px;margin:7px;font-size:16px;font-weight:bold;}
+.song{display:block;width:90%;margin:12px auto;background:#56349b;color:white;}
+.start{background:#9b6cff;color:white;width:90%;}
+.info{background:#211342;padding:15px;border-radius:15px;margin:15px 0;font-size:18px;}
+#piano{display:flex;height:210px;margin-top:20px;}
+.key{flex:1;background:white;color:black;border:2px solid #222;border-radius:0 0 10px 10px;margin:0;padding-top:160px;}
+.key.active{background:#a98aff;}
+.hidden{display:none;}
+#message{font-size:19px;min-height:30px;}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>🎹 Piano Repeat Challenge</h1>
+
+<div id="menu">
+<h2>🎵 Pilih Lagu</h2>
+
+<button class="song" onclick="selectSong('twinkle')">⭐ Twinkle Twinkle Little Star</button>
+<button class="song" onclick="selectSong('burung')">🐦 Burung Kakak Tua</button>
+<button class="song" onclick="selectSong('baa')">🐑 Baa Baa Black Sheep</button>
+
+<p id="selected">Belum pilih lagu</p>
+
+<button class="start" onclick="startGame()">▶️ MULA GAME</button>
+</div>
+
+<div id="game" class="hidden">
+
+<h2 id="songTitle"></h2>
+
+<div class="info">
+⭐ Score: <span id="score">0</span>
+&nbsp;&nbsp;
+❤️ Lives: <span id="lives">3</span>
+&nbsp;&nbsp;
+🎯 Round: <span id="round">1</span>
+</div>
+
+<p id="message">Tekan PLAY ROUND 🎵</p>
+
+<button id="playButton" onclick="playRound()">🎵 PLAY ROUND</button>
+
+<p>Nota awak:<br><b id="playerNotes">-</b></p>
+
+<div id="piano">
+<button class="key" onclick="press('C4')" id="C4">C</button>
+<button class="key" onclick="press('D4')" id="D4">D</button>
+<button class="key" onclick="press('E4')" id="E4">E</button>
+<button class="key" onclick="press('F4')" id="F4">F</button>
+<button class="key" onclick="press('G4')" id="G4">G</button>
+<button class="key" onclick="press('A4')" id="A4">A</button>
+<button class="key" onclick="press('B4')" id="B4">B</button>
+<button class="key" onclick="press('C5')" id="C5">C</button>
+</div>
+
+<button onclick="location.reload()">🔄 MAIN SEMULA</button>
+</div>
+</div>
+
+<script>
+const songs={
+twinkle:{name:"⭐ Twinkle Twinkle Little Star",notes:["C4","C4","G4","G4","A4","A4","G4","F4","F4","E4","E4","D4","D4","C4"]},
+burung:{name:"🐦 Burung Kakak Tua",notes:["C4","C4","C4","D4","E4","E4","D4","C4","E4","E4","D4","D4","C4"]},
+baa:{name:"🐑 Baa Baa Black Sheep",notes:["C4","C4","G4","G4","A4","A4","G4","F4","F4","E4","E4","D4","D4","C4"]}
+};
+
+const frequency={C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392,A4:440,B4:493.88,C5:523.25};
+
+let chosen=null,round=1,score=0,lives=3,target=[],player=[],playing=false,audio;
+
+function selectSong(song){
+  chosen=song;
+  document.getElementById("selected").innerHTML="✅ "+songs[song].name;
+}
+
+function startGame(){
+  if(!chosen){alert("Pilih lagu dulu 🎵");return;}
+  document.getElementById("menu").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  document.getElementById("songTitle").innerHTML=songs[chosen].name;
+  update();
+}
+
+function sound(note){
+  if(!audio) audio=new (window.AudioContext||window.webkitAudioContext)();
+  if(audio.state==="suspended") audio.resume();
+  let oscillator=audio.createOscillator();
+  let gain=audio.createGain();
+  oscillator.frequency.value=frequency[note];
+  oscillator.type="triangle";
+  gain.gain.value=.3;
+  oscillator.connect(gain);
+  gain.connect(audio.destination);
+  oscillator.start();
+  setTimeout(()=>oscillator.stop(),400);
+}
+
+function flash(note){
+  let key=document.getElementById(note);
+  key.classList.add("active");
+  setTimeout(()=>key.classList.remove("active"),300);
+}
+
+function playRound(){
+  playing=false;
+  player=[];
+  document.getElementById("playerNotes").innerHTML="-";
+  document.getElementById("message").innerHTML="🎧 Dengar nota...";
+  document.getElementById("playButton").disabled=true;
+
+  let amount=3+(round*2);
+  if(amount>songs[chosen].notes.length) amount=songs[chosen].notes.length;
+  target=songs[chosen].notes.slice(0,amount);
+
+  let i=0;
+  function nextNote(){
+    if(i>=target.length){
+      document.getElementById("message").innerHTML="🎹 YOUR TURN!";
+      playing=true;
+      return;
+    }
+    sound(target[i]);
+    flash(target[i]);
+    i++;
+    setTimeout(nextNote,600);
+  }
+  nextNote();
+}
+
+function press(note){
+  sound(note);
+  flash(note);
+  if(!playing)return;
+
+  player.push(note);
+  document.getElementById("playerNotes").innerHTML=player.join(" → ");
+  let position=player.length-1;
+
+  if(note!==target[position]){
+    lives--;
+    playing=false;
+    update();
+    document.getElementById("message").innerHTML="❌ SALAH!";
+
+    setTimeout(()=>{
+      if(lives<=0){
+        alert("Game Over! Score: "+score);
+        location.reload();
+      }else{
+        round++;
+        prepare();
+      }
+    },1000);
+    return;
+  }
+
+  if(player.length===target.length){
+    score+=10;
+    playing=false;
+    update();
+    document.getElementById("message").innerHTML="🎉 BETUL! +10";
+
+    setTimeout(()=>{
+      if(target.length>=songs[chosen].notes.length){
+        alert("🏆 Tahniah! Lagu habis! Score: "+score);
+        location.reload();
+      }else{
+        round++;
+        prepare();
+      }
+    },1000);
+  }
+}
+
+function prepare(){
+  document.getElementById("round").innerHTML=round;
+  document.getElementById("playerNotes").innerHTML="-";
+  document.getElementById("message").innerHTML="Tekan PLAY ROUND 🎵";
+  document.getElementById("playButton").disabled=false;
+}
+
+function update(){
+  document.getElementById("score").innerHTML=score;
+  document.getElementById("lives").innerHTML=lives;
+  document.getElementById("round").innerHTML=round;
+}
+</script>
+</body>
+</html>
